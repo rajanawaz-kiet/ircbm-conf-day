@@ -30,8 +30,8 @@ export const HomeView: React.FC<HomeViewProps> = ({
     <div className="max-w-4xl mx-auto px-4 sm:px-6 py-8 sm:py-12 space-y-10">
       {/* Original official branding, versioned in GitHub with the deployment. */}
       <div className="flex flex-col sm:flex-row items-center justify-center gap-5 sm:gap-8 pb-4 min-w-0">
-        <img src="/kiet-official.png" alt="KIET official logo" className="h-24 sm:h-28 w-auto max-w-full object-contain shrink-0" />
         <img src="/kiet-25-years.jpg" alt="KIET 25 Years — Centre of Excellence" className="w-full max-w-[440px] sm:w-[min(65%,440px)] h-auto max-h-36 object-contain" />
+        <img src="/ibhm-duhs-logo.png" alt="Dow University of Health Sciences (DUHS), conference partner" className="h-24 sm:h-28 w-auto max-w-full object-contain shrink-0" />
       </div>
 
       {/* Conference Header Information */}
