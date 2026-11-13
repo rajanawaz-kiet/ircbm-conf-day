@@ -1,0 +1,6 @@
+{
+  "name": "IRCBM 2026 Conference Companion",
+  "description": "Official companion application for the International Research Conference on Business & Management (IRCBM 2026), organized by College of Management Sciences (CoMS), KIET.",
+  "requestFramePermissions": ["camera"],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

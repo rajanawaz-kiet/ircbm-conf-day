@@ -1,0 +1,141 @@
+@import "tailwindcss";
+
+@layer base {
+  :root {
+    /* Theme color variables from the aesthetic mockup */
+    --canvas-bg: #E0DCD5;
+    --card-bg: #FFFFFF;
+    --brand-primary: #262B37;
+    --brand-hover: #1E222D;
+    --brand-active: #14171E;
+    --brand-tint: #F3F2F0;
+    --brand-border: #A091A3;
+    
+    --secondary-primary: #2C323E;
+    --secondary-hover: #222731;
+    
+    --accent-bronze: #8D7A68;
+    --border-mauve: #A091A3;
+    
+    --text-dark: #262B37;
+    --text-light: #E0DCD5;
+  }
+
+  /* Global background override for total visual unification */
+  body, 
+  .min-h-screen, 
+  .bg-\[\#F4F8FA\] {
+    background-color: #E0DCD5 !important;
+  }
+
+  body {
+    color: #262B37;
+  }
+
+  /* Elegant global typography pairings */
+  h1, h2, h3, h4, h5, h6,
+  .text-3xl, .text-2xl, .text-xl, .text-lg {
+    color: #2C323E;
+  }
+
+  /* Surface Cards */
+  .bg-white,
+  .bg-slate-50,
+  .bg-gray-50 {
+    background-color: #FFFFFF !important;
+  }
+
+  /* Primary Interactive Elements (CTAs, Navigation active buttons, badges) */
+  .bg-\[\#1793D1\],
+  .bg-blue-600,
+  .bg-blue-700,
+  .bg-indigo-600,
+  .bg-\[\#091B2E\] {
+    background-color: #262B37 !important;
+    color: #E0DCD5 !important;
+  }
+
+  .hover\:bg-\[\#127EB5\]:hover,
+  .hover\:bg-blue-700:hover,
+  .hover\:bg-indigo-700:hover {
+    background-color: #1E222D !important;
+  }
+
+  .active\:bg-\[\#0F6B9B\]:active {
+    background-color: #14171E !important;
+  }
+
+  /* Tint backgrounds */
+  .bg-\[\#EBF6FB\],
+  .bg-blue-50,
+  .bg-indigo-50 {
+    background-color: #F3F2F0 !important;
+  }
+
+  /* Primary Text Highlights */
+  .text-\[\#1793D1\],
+  .text-blue-600,
+  .text-indigo-600 {
+    color: #262B37 !important;
+  }
+
+  /* Secondary Actions and Headers (Slightly lighter charcoal grey) */
+  .bg-slate-100,
+  .bg-gray-100 {
+    background-color: #2C323E !important;
+    color: #E0DCD5 !important;
+  }
+
+  /* Accent Bronze Dividers, Icon highlights, Details */
+  .border-\[\#BAE3F7\],
+  .border-slate-300,
+  .border-gray-300,
+  hr {
+    border-color: #8D7A68 !important;
+  }
+
+  /* General Mauve Borders & Grid lines */
+  .border,
+  .border-b,
+  .border-t,
+  .border-l,
+  .border-r,
+  .border-\[\#E2EDF4\],
+  .border-slate-200,
+  .border-gray-200,
+  .border-\[\#D0E5F2\] {
+    border-color: #A091A3 !important;
+  }
+
+  /* Form Input Controls */
+  input, select, textarea {
+    background-color: #FFFFFF !important;
+    border-color: #A091A3 !important;
+    color: #262B37 !important;
+  }
+  
+  input:focus, select:focus, textarea:focus {
+    outline-color: #8D7A68 !important;
+    border-color: #8D7A68 !important;
+  }
+}
+
+@media print {
+  body * {
+    visibility: hidden;
+  }
+  #printable-badge-content,
+  #printable-badge-content * {
+    visibility: visible;
+  }
+  #printable-badge-content {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100%;
+    margin: 0;
+    padding: 24px;
+    border: 1px solid #A091A3;
+    box-shadow: none !important;
+  }
+}
