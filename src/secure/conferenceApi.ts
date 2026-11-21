@@ -37,3 +37,13 @@ export async function listParticipants() {
 export async function authorizeVolunteer(email:string, enabled:boolean) {
  return (await httpsCallable(server!,'createOrUpdateVolunteer')({email,enabled})).data;
 }
+
+export async function setCheckInClosed(closed:boolean) {
+ return (await httpsCallable(server!,'setCheckInClosed')({closed})).data;
+}
+export async function getCheckInStatus() {
+ return (await httpsCallable(server!,'getCheckInStatus')({})).data as {closed:boolean};
+}
+export async function loadApprovedProgramme() {
+ return (await httpsCallable(server!,'loadApprovedProgramme')({})).data;
+}
