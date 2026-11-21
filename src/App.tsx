@@ -1,305 +1,78 @@
-/**
- * @license
- * SPDX-License-Identifier: Apache-2.0
+import React,{useState,useEffect} from 'react';
+import {onSnapshot,collection,query} from 'firebase/firestore';
+import {ActivePage,ProgrammeItem,Participant} from './types';
+import {store} from './services/store';
+import {Header} from './components/Header';
+import {OfficialLogo} from './components/OfficialLogo';
+import {HomeView} from './views/HomeView';
+import {ProgrammeView} from './views/ProgrammeView';
+import {MyScheduleView} from './views/MyScheduleView';
+import {VenueView} from './views/VenueView';
+import {AnnouncementsView} from './views/AnnouncementsView';
+import {firebaseConfigured,publicDb} from './secure/firebaseClient';
+import {useSecureUser,EmailAccess} from './secure/SecureAccess';
+import {SecureAdmin} from './secure/SecureAdmin';
+import {ParticipantPass} from './secure/ParticipantPass';
+import {VolunteerScanner} from './secure/VolunteerScanner';
+import verifiedProgramme from './data/programme_verified_58.json';
+
+/** Secure production routes replace the legacy localStorage admin, password, and tracker pages.
+ * Conference branding and public presentation views stay as in the supplied GitHub source.
  */
-
-import { useState, useEffect } from 'react';
-import { ActivePage, ProgrammeItem, Participant, ConferenceAsset, VenueInfo } from './types';
-import { store } from './services/store';
-import { OfficialLogo } from './components/OfficialLogo';
-import { Header } from './components/Header';
-import { HomeView } from './views/HomeView';
-import { ProgrammeView } from './views/ProgrammeView';
-import { MyScheduleView } from './views/MyScheduleView';
-import { MyQrPassView } from './views/MyQrPassView';
-import { VenueView } from './views/VenueView';
-import { AnnouncementsView } from './views/AnnouncementsView';
-import { ParticipantRegistrationView } from './views/ParticipantRegistrationView';
-import { SignInView } from './views/SignInView';
-import { MyProfileView } from './views/MyProfileView';
-import { AdminView } from './views/admin/AdminView';
-import { TrackerView } from './views/TrackerView';
-
-export default function App() {
-  const [activePage, setActivePage] = useState<ActivePage>('home');
-  const [currentUser, setCurrentUser] = useState<Participant | null>(() => store.getCurrentUser());
-  const [programmeItems, setProgrammeItems] = useState(() => store.getProgrammeItems());
-  const [announcements, setAnnouncements] = useState(() => store.getAnnouncements());
-  const [venueInfo, setVenueInfo] = useState(() => store.getVenueInfo());
-  const [participants, setParticipants] = useState(() => store.getParticipants());
-  const [assets, setAssets] = useState<ConferenceAsset[]>(() => store.getAssets());
-  const [savedScheduleIds, setSavedScheduleIds] = useState<string[]>(() => store.getScheduleItemIds());
-
-  // Shared Programme Item Detail state for quick view from anywhere
-  const [selectedProgrammeItem, setSelectedProgrammeItem] = useState<ProgrammeItem | null>(null);
-
-  // Subscribe to changes in store
-  useEffect(() => {
-    const unsubscribe = store.subscribe(() => {
-      setCurrentUser(store.getCurrentUser());
-      setProgrammeItems(store.getProgrammeItems());
-      setAnnouncements(store.getAnnouncements());
-      setVenueInfo(store.getVenueInfo());
-      setParticipants(store.getParticipants());
-      setSavedScheduleIds(store.getScheduleItemIds());
-      setAssets(store.getAssets());
-    });
-    return unsubscribe;
-  }, []);
-
-  // Check URL for direct volunteer scanner link bypass (?gate=tracker)
-  useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    if (params.get('gate') === 'tracker' || params.get('mode') === 'tracker') {
-      const res = store.signInTracker('2026');
-      if (res.success && res.participant) {
-        // Automatically route to tracker
-        setActivePage('tracker');
-        // Clear query parameters cleanly from address bar
-        window.history.replaceState({}, document.title, window.location.pathname);
-      }
-    }
-  }, []);
-
-  // Handlers
-  const handleNavigate = (page: ActivePage) => {
-    setActivePage(page);
-    window.scrollTo({ top: 0, behavior: 'smooth' });
-  };
-
-  const handleSignOut = () => {
-    store.signOut();
-    handleNavigate('home');
-  };
-
-  const handleToggleSchedule = (itemId: string) => {
-    store.toggleScheduleItem(itemId);
-  };
-
-  const handleViewProgrammeDetail = (item: ProgrammeItem) => {
-    setSelectedProgrammeItem(item);
-    handleNavigate('programme');
-  };
-
-  const handleRegisterParticipant = (data: any) => {
-    return store.registerParticipant(data);
-  };
-
-  const handleSignIn = (email: string, password?: string) => {
-    return store.signIn(email, password);
-  };
-
-  const handleUpdateProfile = (updates: Partial<Participant>) => {
-    return store.updateProfile(updates);
-  };
-
-  // Admin actions
-  const handleAddProgrammeItem = (item: Omit<ProgrammeItem, 'id'>) => {
-    store.addProgrammeItem(item);
-  };
-
-  const handleUpdateProgrammeItem = (item: ProgrammeItem) => {
-    store.updateProgrammeItem(item);
-  };
-
-  const handleDeleteProgrammeItem = (id: string) => {
-    store.deleteProgrammeItem(id);
-  };
-
-  const handleCheckInParticipant = (id: string) => {
-    return store.checkInParticipant(id);
-  };
-
-  const handleUpdateParticipant = (p: Participant) => {
-    store.updateParticipant(p);
-  };
-
-  const handleAddAnnouncement = (title: string, message: string) => {
-    store.addAnnouncement(title, message);
-  };
-
-  const handleUpdateAnnouncement = (ann: any) => {
-    store.updateAnnouncement(ann);
-  };
-
-  const handleDeleteAnnouncement = (id: string) => {
-    store.deleteAnnouncement(id);
-  };
-
-  // Assets CMS handlers
-  const handleAddAsset = (name: string, type: 'logo' | 'banner' | 'brochure' | 'other', url: string, description?: string) => {
-    store.addAsset(name, type, url, description);
-  };
-
-  const handleToggleAsset = (id: string) => {
-    store.toggleAssetActive(id);
-  };
-
-  const handleDeleteAsset = (id: string) => {
-    store.deleteAsset(id);
-  };
-
-  const handleReplaceLogo = (name: string, url: string, description?: string) => {
-    store.replaceActiveLogo(name, url, description);
-  };
-
-  const handleCleanMemory = () => {
-    store.cleanAssetMemory();
-  };
-
-  const handleResetAssets = () => {
-    store.resetToDefaultAssets();
-  };
-
-  const handleUpdateVenue = (venue: VenueInfo) => {
-    store.updateVenue(venue);
-  };
-
-  // Calculate user's saved items
-  const userSavedItems = programmeItems.filter((i) => savedScheduleIds.includes(i.id));
-
-  return (
-    <div className="min-h-screen flex flex-col bg-[#E0DCD5] text-[#262B37] font-sans antialiased selection:bg-[#F3F2F0] selection:text-[#262B37]">
-      {/* Header with Official Logo & Participant Navigation */}
-      <Header
-        activePage={activePage}
-        onNavigate={handleNavigate}
-        currentUser={currentUser}
-        onSignOut={handleSignOut}
-      />
-
-      {/* Main Content Area */}
-      <main className="flex-1 pb-16">
-        {activePage === 'home' && (
-          <HomeView
-            onNavigate={handleNavigate}
-            programmeItems={programmeItems}
-            announcements={announcements}
-            venueInfo={venueInfo}
-            onViewProgrammeDetail={handleViewProgrammeDetail}
-            assets={assets}
-          />
-        )}
-
-        {activePage === 'programme' && (
-          <ProgrammeView
-            programmeItems={programmeItems}
-            currentUser={currentUser}
-            savedItemIds={savedScheduleIds}
-            onToggleSchedule={handleToggleSchedule}
-            onRequireSignIn={() => handleNavigate('sign-in')}
-            selectedDetailItem={selectedProgrammeItem}
-            setSelectedDetailItem={setSelectedProgrammeItem}
-          />
-        )}
-
-        {activePage === 'my-schedule' && (
-          <MyScheduleView
-            currentUser={currentUser}
-            savedItems={userSavedItems}
-            onRemoveFromSchedule={handleToggleSchedule}
-            onViewProgrammeDetail={handleViewProgrammeDetail}
-            onNavigateToProgramme={() => handleNavigate('programme')}
-            onNavigateToSignIn={() => handleNavigate('sign-in')}
-          />
-        )}
-
-        {activePage === 'my-qr-pass' && (
-          <MyQrPassView
-            currentUser={currentUser}
-            onNavigateToSignIn={() => handleNavigate('sign-in')}
-            onNavigateToRegister={() => handleNavigate('register')}
-          />
-        )}
-
-        {activePage === 'venue' && (
-          <VenueView
-            venueInfo={venueInfo}
-            onNavigateToProgramme={() => handleNavigate('programme')}
-          />
-        )}
-
-        {activePage === 'announcements' && (
-          <AnnouncementsView announcements={announcements} />
-        )}
-
-        {activePage === 'register' && (
-          <ParticipantRegistrationView
-            onRegister={handleRegisterParticipant}
-            onNavigateToQrPass={() => handleNavigate('my-qr-pass')}
-            onNavigateToSignIn={() => handleNavigate('sign-in')}
-          />
-        )}
-
-        {activePage === 'sign-in' && (
-          <SignInView
-            onSignIn={handleSignIn}
-            onTrackerSignIn={(pin) => store.signInTracker(pin)}
-            onNavigateToRegister={() => handleNavigate('register')}
-            onSignedInSuccess={(user) => {
-              if (user.role === 'admin') {
-                handleNavigate('admin');
-              } else if (user.role === 'tracker') {
-                handleNavigate('tracker');
-              } else {
-                handleNavigate('my-qr-pass');
-              }
-            }}
-          />
-        )}
-
-        {activePage === 'tracker' && (
-          <TrackerView
-            currentUser={currentUser}
-            participants={participants}
-            onCheckInParticipant={handleCheckInParticipant}
-            onSignOut={handleSignOut}
-          />
-        )}
-
-        {activePage === 'my-profile' && (
-          <MyProfileView
-            currentUser={currentUser}
-            onUpdateProfile={handleUpdateProfile}
-            onNavigateToSignIn={() => handleNavigate('sign-in')}
-          />
-        )}
-
-        {activePage === 'admin' && (
-          <AdminView
-            currentUser={currentUser}
-            programmeItems={programmeItems}
-            participants={participants}
-            announcements={announcements}
-            assets={assets}
-            venueInfo={venueInfo}
-            onAddProgrammeItem={handleAddProgrammeItem}
-            onUpdateProgrammeItem={handleUpdateProgrammeItem}
-            onDeleteProgrammeItem={handleDeleteProgrammeItem}
-            onCheckInParticipant={handleCheckInParticipant}
-            onUpdateParticipant={handleUpdateParticipant}
-            onAddAnnouncement={handleAddAnnouncement}
-            onUpdateAnnouncement={handleUpdateAnnouncement}
-            onDeleteAnnouncement={handleDeleteAnnouncement}
-            onAddAsset={handleAddAsset}
-            onToggleAsset={handleToggleAsset}
-            onDeleteAsset={handleDeleteAsset}
-            onReplaceLogo={handleReplaceLogo}
-            onCleanMemory={handleCleanMemory}
-            onResetAssets={handleResetAssets}
-            onUpdateVenue={handleUpdateVenue}
-            onNavigateToSignIn={() => handleNavigate('sign-in')}
-            onDirectAdminSignIn={() => {
-              const res = store.signIn('admin@ircbm2026.kiet.edu.pk', 'Rajarubnawaz42201');
-              if (res.success && res.participant) {
-                setCurrentUser(res.participant);
-              }
-            }}
-            onSignIn={(email, password) => handleSignIn(email, password)}
-          />
-        )}
-      </main>
-
+export default function App(){
+ const [activePage,setActivePage]=useState<ActivePage>('home');
+ const [programmeItems,setProgrammeItems]=useState<ProgrammeItem[]>(verifiedProgramme as ProgrammeItem[]);
+ const [programmeError,setProgrammeError]=useState('');
+ const [announcements]=useState(()=>store.getAnnouncements());
+ const [venueInfo]=useState(()=>store.getVenueInfo());
+ const [assets]=useState(()=>store.getAssets());
+ const [savedScheduleIds,setSavedScheduleIds]=useState<string[]>(()=>store.getScheduleItemIds());
+ const [selectedProgrammeItem,setSelectedProgrammeItem]=useState<ProgrammeItem|null>(null);
+ const {user,role,ready,signOut}=useSecureUser();
+ const [localRev,setLocalRev]=useState(0);
+ useEffect(()=>store.subscribe(()=>{setSavedScheduleIds(store.getScheduleItemIds());setLocalRev(v=>v+1)}),[]);
+ useEffect(()=>{
+   if(!firebaseConfigured || !publicDb) return;
+   return onSnapshot(query(collection(publicDb,'programme')),snapshot=>{
+     // Once connected, show ONLY actual centrally stored records; do not silently show demo data.
+     setProgrammeItems(snapshot.docs.map(d=>({id:d.id,...d.data()} as ProgrammeItem)));
+     setProgrammeError('');
+   },error=>{setProgrammeError(`Could not load shared programme: ${error.message}`)});
+ },[]);
+ useEffect(()=>{
+   const params=new URLSearchParams(window.location.search);
+   // Setup link is navigation only. It NEVER authenticates a volunteer.
+   if(params.get('gate')==='tracker'||params.get('mode')==='tracker')setActivePage('tracker');
+   if(params.get('finishEmailSignIn'))setActivePage('sign-in');
+ },[]);
+ const currentUser:Participant|null=user?{
+  participantId:user.uid,title:'',firstName:user.displayName||user.email?.split('@')[0]||'Participant',lastName:'',
+  email:user.email||'',mobile:'',institution:'',designation:'',city:'',country:'',
+  participantCategory:'Presenter',qrToken:'',checkedIn:false,createdAt:'',role:role==='volunteer'?'tracker':role==='admin'?'admin':'participant'
+ }:null;
+ const handleNavigate=(page:ActivePage)=>{setActivePage(page);window.scrollTo({top:0,behavior:'smooth'})};
+ const requireAccess=(page:'admin'|'tracker'|'my-qr-pass')=>{
+  if(!firebaseConfigured)return <EmailAccess user={user} role={role} onSignOut={signOut}/>;
+  if(!ready)return <p className="text-center p-10">Verifying account access…</p>;
+  if(!user)return <EmailAccess user={user} role={role} onSignOut={signOut}/>;
+  if(page==='admin')return role==='admin'?<SecureAdmin papers={programmeItems}/>:<p role="alert" className="text-center p-10">Your account is not authorized as an administrator.</p>;
+  if(page==='tracker')return role==='admin'||role==='volunteer'?<div className="max-w-3xl mx-auto p-6"><VolunteerScanner/></div>:<p role="alert" className="text-center p-10">Only individually authorized conference volunteers may operate the scanner.</p>;
+  return <div className="max-w-3xl mx-auto p-6"><ParticipantPass/></div>;
+ };
+ return <div className="min-h-screen flex flex-col bg-[#E0DCD5] text-[#262B37] font-sans antialiased selection:bg-[#F3F2F0] selection:text-[#262B37]">
+ <Header activePage={activePage} onNavigate={handleNavigate} currentUser={currentUser} onSignOut={()=>{void signOut();handleNavigate('home')}}/>
+ <main className="flex-1 pb-16">
+ {programmeError&&<div role="alert" className="bg-amber-100 p-3 text-center">{programmeError}</div>}
+ {activePage==='home'&&<HomeView onNavigate={handleNavigate} programmeItems={programmeItems} announcements={announcements} venueInfo={venueInfo} assets={assets} onViewProgrammeDetail={item=>{setSelectedProgrammeItem(item);handleNavigate('programme')}}/>}
+ {activePage==='programme'&&<ProgrammeView programmeItems={programmeItems} currentUser={currentUser} savedItemIds={savedScheduleIds} onToggleSchedule={id=>store.toggleScheduleItem(id)} onRequireSignIn={()=>handleNavigate('sign-in')} selectedDetailItem={selectedProgrammeItem} setSelectedDetailItem={setSelectedProgrammeItem}/>}
+ {activePage==='my-schedule'&&<MyScheduleView currentUser={currentUser} savedItems={programmeItems.filter(p=>savedScheduleIds.includes(p.id))} onRemoveFromSchedule={id=>store.toggleScheduleItem(id)} onViewProgrammeDetail={item=>{setSelectedProgrammeItem(item);handleNavigate('programme')}} onNavigateToProgramme={()=>handleNavigate('programme')} onNavigateToSignIn={()=>handleNavigate('sign-in')}/>}
+ {activePage==='venue'&&<VenueView venueInfo={venueInfo} onNavigateToProgramme={()=>handleNavigate('programme')}/>}
+ {activePage==='announcements'&&<AnnouncementsView announcements={announcements}/>}
+ {activePage==='sign-in'&&<div className="max-w-2xl mx-auto p-4"><EmailAccess user={user} role={role} onSignOut={signOut}/></div>}
+ {activePage==='register'&&<div className="max-w-xl mx-auto p-8 bg-white rounded mt-10"><h2 className="font-bold text-xl">Approved conference presenters</h2><p className="mt-2">Registration is managed through the conference administrator's approved participant CSV. Use your approved email address to sign in and access your personal QR pass.</p><button onClick={()=>handleNavigate('sign-in')} className="mt-4 bg-slate-800 text-white px-4 py-2 rounded">Secure sign-in</button></div>}
+ {activePage==='my-profile'&&<div className="max-w-2xl mx-auto p-6"><EmailAccess user={user} role={role} onSignOut={signOut}/></div>}
+ {(activePage==='admin'||activePage==='tracker'||activePage==='my-qr-pass')&&requireAccess(activePage)}
+ </main>
       {/* Section 29: FOOTER
           Contains the official IRCBM 2026 logo on every page, with clean conference credentials and admin gateway.
           Features TWO distinct color shades as observed in the image footer palette.
@@ -350,6 +123,5 @@ export default function App() {
           </div>
         </div>
       </footer>
-    </div>
-  );
+ </div>;
 }

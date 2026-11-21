@@ -36,7 +36,7 @@ const DEFAULT_ADMIN: Participant = {
   checkedInAt: new Date().toISOString(),
   createdAt: new Date().toISOString(),
   role: 'admin',
-  passwordHash: 'Rajarubnawaz42201',
+  passwordHash: '',
 };
 
 // Initial sample participant for demo / testing
@@ -58,7 +58,7 @@ const DEFAULT_PARTICIPANT: Participant = {
   checkedInAt: null,
   createdAt: new Date().toISOString(),
   role: 'participant',
-  passwordHash: 'welcome2026',
+  passwordHash: '',
 };
 
 // Initial venue meeting specification
@@ -229,23 +229,7 @@ class Store {
   getParticipants(): Participant[] {
     const list = this.get<Participant[]>(STORAGE_KEYS.PARTICIPANTS, []);
     if (list.length === 0) {
-      this.set(STORAGE_KEYS.PARTICIPANTS, [DEFAULT_ADMIN, DEFAULT_PARTICIPANT]);
-      return [DEFAULT_ADMIN, DEFAULT_PARTICIPANT];
-    }
-    // Ensure default admin exists and has the correct password synced from code
-    const adminIndex = list.findIndex((p) => p.email.toLowerCase() === DEFAULT_ADMIN.email.toLowerCase());
-    if (adminIndex === -1) {
-      list.unshift(DEFAULT_ADMIN);
-      this.set(STORAGE_KEYS.PARTICIPANTS, list);
-    } else {
-      if (list[adminIndex].passwordHash !== DEFAULT_ADMIN.passwordHash || list[adminIndex].role !== DEFAULT_ADMIN.role) {
-        list[adminIndex] = {
-          ...list[adminIndex],
-          passwordHash: DEFAULT_ADMIN.passwordHash,
-          role: DEFAULT_ADMIN.role,
-        };
-        this.set(STORAGE_KEYS.PARTICIPANTS, list);
-      }
+      return [];
     }
     return list;
   }
@@ -254,7 +238,7 @@ class Store {
     const user = this.get<Participant | null>(STORAGE_KEYS.CURRENT_USER, null);
     if (!user) {
       // For immediate preview convenience, start signed in as the demo participant
-      return DEFAULT_PARTICIPANT;
+      return null;
     }
     return user;
   }
