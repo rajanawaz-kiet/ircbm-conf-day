@@ -1,0 +1,22 @@
+rules_version = '2';
+service cloud.firestore {
+ match /databases/{database}/documents {
+   // The conference programme is public; all writes happen in Cloud Functions.
+   match /programme/{paperId} {
+     allow read: if true;
+     allow write: if false;
+   }
+   // No public access to email lists, QR credentials or check-in records.
+   match /participants/{participantId} {
+     allow read, write: if false;
+   }
+   match /roles/{uid} {
+     allow get: if request.auth != null && request.auth.uid == uid;
+     allow list, create, update, delete: if false;
+   }
+   match /checkin_audit/{eventId} {
+     allow read, write: if false;
+   }
+   match /{document=**} { allow read, write: if false; }
+ }
+}
