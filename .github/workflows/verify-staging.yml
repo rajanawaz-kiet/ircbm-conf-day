@@ -1,0 +1,26 @@
+name: Verify IRCBM staging changes
+on:
+  push:
+    branches: [ircbm-secure-backend-review]
+  pull_request:
+    branches: [main]
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: package-lock.json
+      - name: Install dependencies
+        run: npm install --no-audit --no-fund
+      - name: TypeScript check
+        run: npm run lint
+      - name: Production build
+        run: npm run build
+      - name: Validate Cloud Functions if present
+        shell: bash
+        run: |
+          if [ -f functions/index.js ]; then node --check functions/index.js; fi
