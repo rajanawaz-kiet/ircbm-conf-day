@@ -3,6 +3,7 @@
  * Deploy via Firebase CLI. Never put the QR secret in frontend source, GitHub, or Netlify environment.
  */
 import crypto from 'node:crypto';
+import approvedProgramme from './programme_verified_58.json' with { type: 'json' };
 import {initializeApp} from 'firebase-admin/app';
 import {getFirestore, FieldValue} from 'firebase-admin/firestore';
 import {onCall, HttpsError} from 'firebase-functions/v2/https';
@@ -60,10 +61,21 @@ export const replaceProgramme = onCall({region, timeoutSeconds:120, maxInstances
  });
  if (new Set(docs.map(d=>d.id)).size !== docs.length) fail('invalid-argument', 'Repeated paper ID in upload.');
  const existing = await db.collection('programme').get();
- const writer = db.bulkWriter();
- for (const doc of existing.docs) writer.delete(doc.ref);
- for (const item of docs) writer.set(db.collection('programme').doc(item.id), item.paper);
- await writer.close();
+ // Avoid a delete/set race on matching document IDs.
+ const incomingIds=new Set(docs.map(d=>d.id));
+ const obsolete=existing.docs.filter(d=>!incomingIds.has(d.id));
+ const operations=[
+   ...docs.map(d=>({kind:'set',ref:db.collection('programme').doc(d.id),data:d.paper})),
+   ...obsolete.map(d=>({kind:'delete',ref:d.ref}))
+ ];
+ for(let i=0;i<operations.length;i+=400){
+   const batch=db.batch();
+   for(const op of operations.slice(i,i+400)){
+     if(op.kind==='set') batch.set(op.ref,op.data);
+     else batch.delete(op.ref);
+   }
+   await batch.commit();
+ }
  return {success:true, imported:docs.length, replaced:existing.size};
 });
 export const saveProgrammeItem = onCall({region}, async request => {
@@ -127,6 +139,8 @@ export const checkInQR = onCall({region, secrets:[qrSecret], maxInstances:20}, a
  const participantId=parseQR(request.data?.qrToken,qrSecret.value());
  const ref=db.collection('participants').doc(participantId);
  const result=await db.runTransaction(async tx=>{
+   const settings=await tx.get(db.collection('conference_settings').doc('operations'));
+   if(settings.exists && settings.data().checkInClosed===true) fail('failed-precondition','Conference check-in is closed by the administrator.');
    const snap=await tx.get(ref);
    if (!snap.exists || snap.data().approved!==true) fail('not-found','Participant not approved or not found.');
    const p=snap.data();
@@ -155,4 +169,35 @@ export const createOrUpdateVolunteer = onCall({region},async request=>{
  const enabled=request.data?.enabled===true;
  await db.collection('roles').doc(user.uid).set({role:'volunteer',enabled,emailLower:email,updatedAt:FieldValue.serverTimestamp()});
  return {success:true,email,enabled};
+});
+
+ 
+// Administrator can close check-in without deleting conference records.
+export const setCheckInClosed=onCall({region},async request=>{
+ await requireRole(request,['admin']);
+ if(typeof request.data?.closed!=='boolean') fail('invalid-argument','Specify closed true or false.');
+ await db.collection('conference_settings').doc('operations').set({
+   checkInClosed:request.data.closed,updatedAt:FieldValue.serverTimestamp(),updatedBy:request.auth.uid
+ },{merge:true});
+ return {success:true,closed:request.data.closed};
+});
+export const getCheckInStatus=onCall({region},async request=>{
+ await requireRole(request,['admin']);
+ const snap=await db.collection('conference_settings').doc('operations').get();
+ return {closed:snap.exists && snap.data().checkInClosed===true};
+});
+export const loadApprovedProgramme=onCall({region,timeoutSeconds:120},async request=>{
+ await requireRole(request,['admin']);
+ const current=await db.collection('programme').limit(1).get();
+ if(!current.empty) fail('failed-precondition','Programme is not empty. Use explicit CSV replacement instead.');
+ if(approvedProgramme.length!==58) fail('internal','Expected exactly 58 approved papers.');
+ const ids=new Set();
+ const batch=db.batch();
+ for(const paper of approvedProgramme){
+   if(!idPattern.test(paper.id) || ids.has(paper.id)) fail('internal','Invalid or duplicate approved paper ID.');
+   ids.add(paper.id);
+   batch.set(db.collection('programme').doc(paper.id),normalizedPaper(paper));
+ }
+ await batch.commit();
+ return {success:true,imported:approvedProgramme.length};
 });
